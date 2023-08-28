@@ -1,40 +1,28 @@
-pipeline {
-    agent any
-	 tools {
-        nodejs 'NodeJS'
-    }
-	environment {
-        REMOTE_HOST = '13.232.16.21' // Replace with the remote server's IP or hostname
-        REMOTE_USER = 'root'  // Replace with the remote server's username
-        SSH_KEY = credentials('docker-login') // Configure the SSH key credential in Jenkins
-    }
-    stages {
-        stage('Checkout') {
-            steps {
-                // Git step to pull code from the repository
-                git branch: 'master', url: 'https://github.com/somnathp2757/Test.git'
-            }
-        }
-         stage('Build') {
-            steps {
-           
-                tool 'NodeJS'
-                sh 'npm install'
-                
-            }
-        }
-		
-		
-        stage('Copy Data') {
-            steps {
-                script {
-                    // Copy data using SCP command
-                    sshagent(['$SSH_KEY']) {
-                        sh "scp -i ${SSH_KEY} -r /var/lib/jenkins/workspace/test-pipeline/* root@${REMOTE_HOST}:/root/app"
-                    }
-                }
-            }
-        }
-  
-    }
-}
+# Use the official Ubuntu base image
+FROM ubuntu:20.04
+
+# Update package lists and install required packages
+RUN apt-get update && \
+    apt-get install -y apt-utils && \
+    apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean
+
+# Create a working directory for your application
+WORKDIR /app
+
+# Copy the package.json and package-lock.json files to the working directory
+COPY package*.json ./
+
+# Install application dependencies
+RUN npm install
+
+# Copy the rest of the application files to the working directory
+COPY . .
+
+# Expose the port your application uses
+EXPOSE 8080
+
+# Command to run your application
+CMD ["node", "app.js"]
